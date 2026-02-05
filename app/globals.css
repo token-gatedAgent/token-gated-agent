@@ -1,0 +1,191 @@
+@import "tailwindcss";
+
+/* Basic baseline */
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Wallet button */
+.wallet-adapter-button {
+  border-radius: 9999px !important;
+  height: 44px !important;
+  padding: 0 16px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  background: #111827 !important;
+  color: #ffffff !important;
+}
+
+.wallet-adapter-button:hover {
+  opacity: 0.92 !important;
+}
+
+/* ---------------------------------
+   Slow ambient background glow
+---------------------------------- */
+@keyframes slowGlow {
+  0% {
+    transform: translateX(-50%) translateY(0) scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translateX(-50%) translateY(18px) scale(1.04);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) translateY(0) scale(1);
+    opacity: 0.85;
+  }
+}
+
+.glow-blob {
+  animation: slowGlow 12s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+/* Pulse dot (status indicator) */
+@keyframes pulseDot {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.35);
+  }
+  70% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.pulse-dot {
+  animation: pulseDot 1.8s ease-out infinite;
+}
+
+/* ---------------------------------
+   Drift-in animation (NO overshoot)
+---------------------------------- */
+@keyframes subtleIn {
+  from {
+    opacity: 0;
+    transform: translateY(-28px) translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) translateX(0);
+  }
+}
+
+.anim-in {
+  opacity: 0;
+  animation-name: subtleIn;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: forwards;
+  will-change: transform, opacity;
+}
+
+/* Hero-focus timing */
+.anim-1 { animation-duration: 600ms; animation-delay: 120ms; }
+.anim-2 { animation-duration: 900ms; animation-delay: 220ms; }
+.anim-3 { animation-duration: 700ms; animation-delay: 360ms; }
+.anim-4 { animation-duration: 700ms; animation-delay: 460ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-in {
+    opacity: 1;
+    animation: none;
+    transform: none;
+  }
+}
+
+/* ---------------------------------
+   App utility classes
+---------------------------------- */
+.container {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.row {
+  display: flex;
+  gap: 16px;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(229, 231, 235, 1);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.muted {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.btn:hover {
+  opacity: 0.92;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn.secondary {
+  background: transparent;
+  color: #111;
+}
+
+pre.card {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .row {
+    flex-direction: column;
+  }
+}
+.dot {
+  width: 4px;
+  height: 4px;
+  background: #6b7280;
+  border-radius: 999px;
+  animation: dotPulse 1.4s infinite ease-in-out both;
+}
+.dot:nth-child(1) { animation-delay: 0s; }
+.dot:nth-child(2) { animation-delay: .2s; }
+.dot:nth-child(3) { animation-delay: .4s; }
+
+@keyframes dotPulse {
+  0% { opacity: .2; }
+  20% { opacity: 1; }
+  100% { opacity: .2; }
+}
