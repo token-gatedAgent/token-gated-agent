@@ -17,6 +17,7 @@ export default function Home() {
   const [access, setAccess] = useState<AccessState>("awaiting");
   const [verifyFailed, setVerifyFailed] = useState(false);
   const [showAgent, setShowAgent] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
 
   // Når wallet disconnecter, nulstil alt (inkl session + agent UI)
   useEffect(() => {
@@ -25,6 +26,7 @@ export default function Home() {
       setAccess("awaiting");
       setVerifyFailed(false);
       setShowAgent(false);
+      setVerifyError(null);
     }
   }, [connected]);
 
@@ -36,9 +38,11 @@ export default function Home() {
     if (Date.now() < until) {
       setAccess("granted");
       setVerifyFailed(false);
+      setVerifyError(null);
     } else {
       setAccess("awaiting");
       setVerifyFailed(false);
+      setVerifyError(null);
       sessionStorage.removeItem(SESSION_KEY);
     }
   }, [connected, publicKey]);
@@ -46,13 +50,14 @@ export default function Home() {
   async function verifyAccess() {
     if (!connected || !publicKey) return;
     if (!signMessage) {
-      alert("Wallet understøtter ikke signMessage");
+      setVerifyError("Wallet does not support signMessage()");
       return;
     }
 
     try {
       setAccess("checking");
       setVerifyFailed(false);
+      setVerifyError(null);
 
       // 1) Get challenge + canonical message from backend (stateless)
       const nonceRes = await fetch("/api/auth/nonce", {
@@ -61,14 +66,25 @@ export default function Home() {
         body: JSON.stringify({ walletAddress: publicKey.toBase58() }),
       });
 
-      const nonceData = await nonceRes.json();
+      const nonceText = await nonceRes.text();
+      let nonceData: any = {};
+      try {
+        nonceData = JSON.parse(nonceText);
+      } catch {
+        throw new Error(`Nonce returned non-JSON: ${nonceText.slice(0, 120)}`);
+      }
+
       const challenge = String(nonceData?.challenge || "");
       const message = String(nonceData?.message || "");
-      if (!challenge || !message) throw new Error(nonceData?.error || "Nonce error");
+      if (!nonceRes.ok || !challenge || !message) {
+        throw new Error(nonceData?.error || "Nonce error");
+      }
 
       // 2) Sign EXACT message from backend
       const msgBytes = new TextEncoder().encode(message);
       const sigBytes = await signMessage(msgBytes);
+
+      // Uint8Array -> base64
       const signature = btoa(String.fromCharCode(...sigBytes));
 
       // 3) Verify backend (includes token check)
@@ -83,21 +99,36 @@ export default function Home() {
         }),
       });
 
-      const verifyData = await verifyRes.json();
-      if (!verifyRes.ok) throw new Error(verifyData?.error || "Verify failed");
+      const verifyText = await verifyRes.text();
+      let verifyData: any = {};
+      try {
+        verifyData = JSON.parse(verifyText);
+      } catch {
+        throw new Error(`Verify returned non-JSON: ${verifyText.slice(0, 140)}`);
+      }
+
+      if (!verifyRes.ok) {
+        throw new Error(verifyData?.error || "Verify failed");
+      }
 
       if (verifyData.hasAccess) {
         setAccess("granted");
+        setVerifyFailed(false);
+        setVerifyError(null);
         sessionStorage.setItem(SESSION_KEY, String(Date.now() + SESSION_MS));
       } else {
         setAccess("denied");
+        setVerifyFailed(false);
+        setVerifyError("Wallet verified, but token balance < 1 for the gate mint.");
         sessionStorage.removeItem(SESSION_KEY);
         setShowAgent(false);
       }
     } catch (e: any) {
+      const msg = String(e?.message || e || "Unknown verify error");
       console.error("VERIFY ERROR:", e);
       setVerifyFailed(true);
       setAccess("awaiting");
+      setVerifyError(msg);
       sessionStorage.removeItem(SESSION_KEY);
       setShowAgent(false);
     }
@@ -108,6 +139,7 @@ export default function Home() {
     setAccess("awaiting");
     setVerifyFailed(false);
     setShowAgent(false);
+    setVerifyError(null);
     try {
       await disconnect();
     } catch {
@@ -184,6 +216,15 @@ export default function Home() {
             </ClientOnly>
           </div>
         </div>
+
+        {/* Error strip */}
+        {verifyError && (
+          <div className="mx-auto max-w-5xl px-6 pb-4">
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">
+              <span className="font-semibold">Verify error:</span> {verifyError}
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Hero */}
@@ -217,7 +258,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Agent chat appears after Open Agent */}
         {showAgent && (
           <div style={{ marginTop: 28 }}>
             <AgentChat enabled={access === "granted"} />
